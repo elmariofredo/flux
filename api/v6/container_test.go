@@ -6,6 +6,7 @@ import (
 
 	"github.com/weaveworks/flux/image"
 	"github.com/weaveworks/flux/update"
+	"github.com/weaveworks/flux/policy"
 )
 
 func TestNewContainer(t *testing.T) {
@@ -16,7 +17,7 @@ func TestNewContainer(t *testing.T) {
 		name         string
 		images       update.ImageInfos
 		currentImage image.Info
-		tagPattern   string
+		tagPattern   policy.Pattern
 		fields       []string
 	}
 	tests := []struct {
@@ -31,7 +32,7 @@ func TestNewContainer(t *testing.T) {
 				name:         "container1",
 				images:       update.ImageInfos{testImage},
 				currentImage: testImage,
-				tagPattern:   "*",
+				tagPattern:   policy.PatternAll,
 			},
 			want: Container{
 				Name:                    "container1",

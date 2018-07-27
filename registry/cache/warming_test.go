@@ -9,6 +9,7 @@ import (
 	"github.com/go-kit/kit/log"
 
 	"github.com/weaveworks/flux/image"
+	"github.com/weaveworks/flux/policy"
 	"github.com/weaveworks/flux/registry"
 	"github.com/weaveworks/flux/registry/mock"
 )
@@ -71,7 +72,7 @@ func TestWarm(t *testing.T) {
 	warmer.warm(context.TODO(), logger, repo, registry.NoCredentials())
 
 	registry := &Cache{Reader: c}
-	repoInfo, err := registry.GetSortedRepositoryImages(ref.Name)
+	repoInfo, err := registry.GetSortedRepositoryImages(ref.Name, policy.PatternAll.ImageLess())
 	if err != nil {
 		t.Error(err)
 	}

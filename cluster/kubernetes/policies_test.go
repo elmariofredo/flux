@@ -5,6 +5,8 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/weaveworks/flux"
 	"github.com/weaveworks/flux/policy"
 )
@@ -113,6 +115,30 @@ func TestUpdatePolicies(t *testing.T) {
 				Remove: policy.Set{policy.LockedMsg: "foo"},
 			},
 		},
+		{
+			name: "add tag policy",
+			in:   []string{"flux.weave.works/tag.nginx", "glob:*"},
+			out:  []string{"flux.weave.works/tag.nginx", "glob:*"},
+			update: policy.Update{
+				Add: policy.Set{policy.TagPrefix("nginx"): "glob:*"},
+			},
+		},
+		{
+			name: "add non-glob tag policy",
+			in:   []string{"flux.weave.works/tag.nginx", "foo"},
+			out:  []string{"flux.weave.works/tag.nginx", "foo"},
+			update: policy.Update{
+				Add: policy.Set{policy.TagPrefix("nginx"): "foo"},
+			},
+		},
+		{
+			name: "add semver tag policy",
+			in:   []string{"flux.weave.works/tag.nginx", "semver:*"},
+			out:  []string{"flux.weave.works/tag.nginx", "semver:*"},
+			update: policy.Update{
+				Add: policy.Set{policy.TagPrefix("nginx"): "semver:*"},
+			},
+		},
 	} {
 		caseIn := templToString(t, annotationsTemplate, c.in)
 		caseOut := templToString(t, annotationsTemplate, c.out)
@@ -124,6 +150,15 @@ func TestUpdatePolicies(t *testing.T) {
 			t.Errorf("[%s] Did not get expected result:\n\n%s\n\nInstead got:\n\n%s", c.name, caseOut, string(out))
 		}
 	}
+}
+
+func TestUpdatePolicies_invalidTagPattern(t *testing.T) {
+	resourceID := flux.MustParseResourceID("default:deployment/nginx")
+	update := policy.Update{
+		Add: policy.Set{policy.TagPrefix("nginx"): "semver:invalid"},
+	}
+	_, err := (&Manifests{}).UpdatePolicies(nil, resourceID, update)
+	assert.Error(t, err)
 }
 
 var annotationsTemplate = template.Must(template.New("").Parse(`---

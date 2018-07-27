@@ -40,7 +40,7 @@ type Registry struct {
 	Err    error
 }
 
-func (m *Registry) GetSortedRepositoryImages(id image.Name) ([]image.Info, error) {
+func (m *Registry) GetSortedRepositoryImages(id image.Name, less image.SortLessFunc) ([]image.Info, error) {
 	var imgs []image.Info
 	for _, i := range m.Images {
 		// include only if it's the same repository in the same place

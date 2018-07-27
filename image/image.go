@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/pkg/errors"
 )
 
@@ -276,14 +278,54 @@ func (im *Info) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// ByCreatedDesc is a shim used to sort image info by creation date
-type ByCreatedDesc []Info
-
-func (is ByCreatedDesc) Len() int      { return len(is) }
-func (is ByCreatedDesc) Swap(i, j int) { is[i], is[j] = is[j], is[i] }
-func (is ByCreatedDesc) Less(i, j int) bool {
-	if is[i].CreatedAt.Equal(is[j].CreatedAt) {
-		return is[i].ID.String() < is[j].ID.String()
+func Sort(infos []Info, less SortLessFunc) {
+	if less == nil {
+		less = ByCreatedDesc
 	}
-	return is[i].CreatedAt.After(is[j].CreatedAt)
+	sort.Sort(&infoSort{infos: infos, less: less})
+}
+
+type SortLessFunc func(lhs, rhs *Info) bool
+
+type infoSort struct {
+	infos []Info
+	less  SortLessFunc
+}
+
+func (s *infoSort) Len() int {
+	return len(s.infos)
+}
+
+func (s *infoSort) Swap(i, j int) {
+	s.infos[i], s.infos[j] = s.infos[j], s.infos[i]
+}
+
+func (s *infoSort) Less(i, j int) bool {
+	return s.less(&s.infos[i], &s.infos[j])
+}
+
+// ByCreatedDesc returns true if lhs image should be sorted
+// before rhs with regard to their creation date descending.
+func ByCreatedDesc(lhs, rhs *Info) bool {
+	if lhs.CreatedAt.Equal(rhs.CreatedAt) {
+		return lhs.ID.String() < rhs.ID.String()
+	}
+	return lhs.CreatedAt.After(rhs.CreatedAt)
+}
+
+// BySemverTagDesc returns true if lhs image should be sorted
+// before rhs with regard to their semver order descending.
+func BySemverTagDesc(lhs, rhs *Info) bool {
+	lv, lerr := semver.NewVersion(lhs.ID.Tag)
+	rv, rerr := semver.NewVersion(rhs.ID.Tag)
+	if (lerr != nil && rerr != nil) || (lv == rv) {
+		return lhs.ID.String() < rhs.ID.String()
+	}
+	if lerr != nil {
+		return false
+	}
+	if rerr != nil {
+		return true
+	}
+	return lv.Compare(rv) > 0
 }

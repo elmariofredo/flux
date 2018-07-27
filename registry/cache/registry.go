@@ -2,7 +2,6 @@ package cache
 
 import (
 	"encoding/json"
-	"sort"
 	"time"
 
 	"github.com/pkg/errors"
@@ -33,7 +32,7 @@ type Cache struct {
 
 // GetSortedRepositoryImages returns the list of image manifests in an image
 // repository (e.g,. at "quay.io/weaveworks/flux")
-func (c *Cache) GetSortedRepositoryImages(id image.Name) ([]image.Info, error) {
+func (c *Cache) GetSortedRepositoryImages(id image.Name, less image.SortLessFunc) ([]image.Info, error) {
 	repoKey := NewRepositoryKey(id.CanonicalName())
 	bytes, _, err := c.Reader.GetKey(repoKey)
 	if err != nil {
@@ -59,7 +58,7 @@ func (c *Cache) GetSortedRepositoryImages(id image.Name) ([]image.Info, error) {
 		images[i] = im
 		i++
 	}
-	sort.Sort(image.ByCreatedDesc(images))
+	image.Sort(images, less)
 	return images, nil
 }
 
