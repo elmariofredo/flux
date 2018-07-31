@@ -647,7 +647,10 @@ func mockDaemon(t *testing.T) (*Daemon, func(), func(), *cluster.Mock, *mockEven
 		JobStatusCache: &job.StatusCache{Size: 100},
 		EventWriter:    events,
 		Logger:         logger,
-		LoopVars:       &LoopVars{},
+		// LoopVars:       &LoopVars{},
+		LoopVars: &LoopVars{
+			RegistryPollInterval: 5 * time.Minute,
+		},
 	}
 
 	start := func() {
