@@ -389,6 +389,17 @@ individually:
 fluxctl policy --controller=default:deployment/helloworld --tag='helloworld=prod-*' --tag='sidecar=prod-*'
 ``` 
 
+If your images use semantic versioning you can filter by image tags
+that adhere to certain constraints:
+```
+fluxctl policy --controller=default:deployment/helloworld --tag-all='semver:~1'
+```
+
+or only release images that have a proper semantic version tag:
+```
+fluxctl policy --controller=default:deployment/helloworld --tag-all='semver:*'
+```
+
 ## Actions triggered through `fluxctl`
 
 `fluxctl` provides the following flags for the message and author customization:
