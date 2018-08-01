@@ -38,7 +38,8 @@ func (r ImageRepos) GetRepoImages(repo image.Name) ImageInfos {
 // ImageInfos is a list of image.Info which can be filtered.
 type ImageInfos []image.Info
 
-// Filter returns only the images which match the tagGlob.
+// Filter applies the pattern and its sort order.
+// It returns a new list of image infos.
 func (ii ImageInfos) Filter(pattern policy.Pattern) ImageInfos {
 	var filtered ImageInfos
 	for _, i := range ii {
@@ -53,8 +54,12 @@ func (ii ImageInfos) Filter(pattern policy.Pattern) ImageInfos {
 			filtered = append(filtered, im)
 		}
 	}
-	image.Sort(filtered, pattern.ImageLess())
+	filtered.Sort(pattern)
 	return filtered
+}
+
+func (ii ImageInfos) Sort(pattern policy.Pattern) {
+	image.Sort(ii, pattern.ImageNewerFunc())
 }
 
 // Latest returns the latest image from ImageInfos. If no such image exists,
@@ -111,18 +116,14 @@ func fetchUpdatableImageRepos(registry registry.Registry, updateable []*Controll
 // FetchImageRepos finds all the known image metadata for
 // containers in the controllers given.  The images within each image repo are sorted according
 func FetchImageRepos(reg registry.Registry, cs containers, logger log.Logger) (ImageRepos, error) {
-	// Collect pattern types for sort order
-	patterns := map[image.CanonicalName]policy.Pattern{}
 	imageRepos := imageReposMap{}
 	for i := 0; i < cs.Len(); i++ {
 		for _, container := range cs.Containers(i) {
 			imageRepos[container.Image.CanonicalName()] = nil
-			patterns[container.Image.CanonicalName()] = cs.Pattern(i, container.Name)
 		}
 	}
 	for repo := range imageRepos {
-		pattern := patterns[repo]
-		sortedRepoImages, err := reg.GetSortedRepositoryImages(repo.Name, pattern.ImageLess())
+		sortedRepoImages, err := reg.GetRepositoryImages(repo.Name)
 		if err != nil {
 			// Not an error if missing. Use empty images.
 			if !fluxerr.IsMissing(err) {

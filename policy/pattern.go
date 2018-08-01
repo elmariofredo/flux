@@ -13,33 +13,40 @@ const (
 )
 
 var (
-	// PatternAll matches everything. To the contrary of `semver:*`
-	// which only matches tags that are valid semvers.
-	PatternAll    = NewPattern("glob:*")
-	PatternLatest = NewPattern("glob:latest")
+	// PatternAll matches everything.
+	PatternAll    = NewPattern(globPrefix + "*")
+	PatternLatest = NewPattern(globPrefix + "latest")
 )
 
-// Pattern provides an interface to match arbitrary strings.
+// Pattern provides an interface to match image tags.
 //
 // While the string representation aims to prefix patterns with
 // their respective type, it can also be omitted and defaults then
 // to glob matching.
 type Pattern interface {
 	Matches(tag string) bool
-	// Prefixed string representation
+	// String returns the prefixed string representation.
 	String() string
-	ImageLess() image.SortLessFunc
+	// ImageNewerFunc returns a function to compare image newness.
+	ImageNewerFunc() image.SortLessFunc
+	// Valid returns true if the pattern is considered valid.
 	Valid() bool
 }
 
 type GlobPattern string
 
+// SemverPattern matches by semantic versioning.
+// See https://semver.org/
 type SemverPattern struct {
-	// Pattern without prefix
-	pattern     string
+	pattern     string // pattern without prefix
 	constraints *semver.Constraints
 }
 
+// NewPattern instantiates a Pattern according to the prefix
+// it finds. The prefix is optional and defaults to `glob`.
+//
+// `semver:*` matches only tags that are valid according to
+// semantic versioning while `glob:*` matches every single tag.
 func NewPattern(pattern string) Pattern {
 	if strings.HasPrefix(pattern, semverPrefix) {
 		pattern = strings.TrimPrefix(pattern, semverPrefix)
@@ -57,7 +64,7 @@ func (g GlobPattern) String() string {
 	return globPrefix + string(g)
 }
 
-func (g GlobPattern) ImageLess() image.SortLessFunc {
+func (g GlobPattern) ImageNewerFunc() image.SortLessFunc {
 	return image.ByCreatedDesc
 }
 
@@ -71,7 +78,7 @@ func (s SemverPattern) Matches(tag string) bool {
 		return false
 	}
 
-	// Allow `*` as match-all for valid semvers
+	// Allow `*` as match-all for valid semver tags
 	if s.pattern == semverPrefix+"*" {
 		return true
 	}
@@ -86,7 +93,7 @@ func (s SemverPattern) String() string {
 	return semverPrefix + s.pattern
 }
 
-func (s SemverPattern) ImageLess() image.SortLessFunc {
+func (s SemverPattern) ImageNewerFunc() image.SortLessFunc {
 	return image.BySemverTagDesc
 }
 
